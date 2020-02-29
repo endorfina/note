@@ -62,6 +62,8 @@ readonly NOTE_COMMAND=$1
 shift
 OPT_VERBOSE=no
 
+set -o pipefail
+
 while [[ $# -gt 0 ]]
 do
     ARG_ITER=$1
