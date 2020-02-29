@@ -9,7 +9,7 @@ TMP_FILE=
 
 verbose()
 {
-    if [[ ${OPT_VERBOSE} == yes ]]
+    if [[ $OPT_VERBOSE == yes ]]
     then
         echo >&2 '[' "$@" ']'
     fi
@@ -73,47 +73,40 @@ set -o pipefail
 
 while [[ $# -gt 0 ]]
 do
-    ARG_ITER=$1
+    ARG_ITER=${1#-}
     shift
 
-    if [[ $ARG_ITER == -* ]]
-    then
-        for (( i=1; i<${#ARG_ITER}; i++ ))
-        do
-            case ${ARG_ITER:$i:1} in
-                v)
-                    OPT_VERBOSE='yes'
-                    ;;
+    for (( i=0; i<${#ARG_ITER}; i++ ))
+    do
+        case ${ARG_ITER:$i:1} in
+            v)
+                OPT_VERBOSE='yes'
+                ;;
 
-                l)
-                    (( i++ ))
-                    if [[ $i -lt ${#ARG_ITER} ]]
-                    then
-                        OPT_LIMIT=${ARG_ITER:$i}
-                        i=${#ARG_ITER}
-                    else
-                        OPT_LIMIT=$1
-                        shift
-                    fi
+            l)
+                (( i++ ))
+                if [[ $i -lt ${#ARG_ITER} ]]
+                then
+                    OPT_LIMIT=${ARG_ITER:$i}
+                    i=${#ARG_ITER}
+                else
+                    OPT_LIMIT=$1
+                    shift
+                fi
 
-                    [[ $OPT_LIMIT =~ [^0-9] ]] && die "Wrong -l argument \"$OPT_LIMIT\""
-                    ;;
+                [[ $OPT_LIMIT =~ [^0-9] ]] && die "Wrong -l argument \"$OPT_LIMIT\""
+                ;;
 
-                h)
-                    print_manual
-                    exit 0
-                    ;;
+            h)
+                print_manual
+                exit 0
+                ;;
 
-                *)
-                    die "Invalid option \"${ARG_ITER#-}\""
-                    ;;
-            esac
-        done
-
-    else
-        die "Invalid option \"${ARG_ITER}\""
-    fi
-
+            *)
+                die "Invalid option \"$ARG_ITER\""
+                ;;
+        esac
+    done
 done
 
 readonly EDIT=${EDITOR?}
