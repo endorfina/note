@@ -80,6 +80,18 @@ do
                     OPT_VERBOSE='yes'
                     ;;
 
+                l)
+                    (( i++ ))
+                    if [[ $i -lt ${#ARG_ITER} ]]
+                    then
+                        OPT_LIMIT=${ARG_ITER:$i}
+                        i=${#ARG_ITER}
+                    else
+                        OPT_LIMIT=$1
+                        shift
+                    fi
+                    ;;
+
                 h)
                     print_manual
                     exit 0
@@ -129,7 +141,27 @@ case $NOTE_COMMAND in
         [[ -r $RECORD ]] || die "No record exists"
 
         # shellcheck disable=SC1003
-        sed -e '/^'"$TAG"'/!s~^~'$'\t''~' -e 's~^'"$TAG"' \(.*\)$~-- [[ \1 ]]\'$'\n''~' "$RECORD"
+        RUN=(sed -e '/^'"$TAG"'/!s~^~'$'\t''~' -e 's~^'"$TAG"' \(.*\)$~-- [[ \1 ]]\'$'\n''~' "$RECORD")
+
+        if [[ ${OPT_LIMIT:-0} -gt 0 ]]
+        then
+            verbose "Limit set to $OPT_LIMIT"
+
+            i=0
+
+            "${RUN[@]}" | while read -r
+            do
+                if [[ $REPLY == --* ]]
+                then
+                    (( i++ ))
+                    [[ $i -gt $OPT_LIMIT ]] && break
+                fi
+
+                echo "$REPLY"
+            done
+        else
+            "${RUN[@]}"
+        fi
         ;;
 
     delete)
