@@ -75,9 +75,7 @@ do
 
     if [[ $ARG_ITER == -* ]]
     then
-        ARG_ITER=${ARG_ITER#-}
-
-        for (( i=0; i<${#ARG_ITER}; i++ ))
+        for (( i=1; i<${#ARG_ITER}; i++ ))
         do
             case ${ARG_ITER:$i:1} in
                 v)
