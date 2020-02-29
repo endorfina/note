@@ -42,7 +42,24 @@ assert_callable()
 print_manual()
 {
     cat << _END
-Usage: \$ $PROGNAME new|show [-hv]
+Usage: \$ $PROGNAME command [-hv]
+
+Commands:
+
+  new, add - opens up an empty buffer in your EDITOR.
+        Then, provided it's not empty, $PROGNAME will
+        save the buffer in a shared record file.
+
+  show, print - prints all saved notes in a reverse
+        chronological order to stdout.
+
+  delete - $PROGNAME will erase your current record.
+
+Options:
+
+  -h - prints this help.
+
+  -v - shows verbose logs.
 
 _END
 }
@@ -55,16 +72,16 @@ OPT_VERBOSE=no
 
 while [[ $# -gt 0 ]]
 do
-    ARG=$1
+    ARG_ITER=$1
     shift
 
-    if [[ $ARG == -* ]]
+    if [[ $ARG_ITER == -* ]]
     then
-        ARG=${ARG#-}
+        ARG_ITER=${ARG_ITER#-}
 
-        for (( i=0; i<${#ARG}; i++ ))
+        for (( i=0; i<${#ARG_ITER}; i++ ))
         do
-            case ${ARG:$i:1} in
+            case ${ARG_ITER:$i:1} in
                 v)
                     OPT_VERBOSE='yes'
                     ;;
@@ -75,21 +92,21 @@ do
                     ;;
 
                 *)
-                    die "Invalid option \"${ARG#-}\""
+                    die "Invalid option \"${ARG_ITER#-}\""
                     ;;
             esac
         done
 
     else
-        die "Invalid option \"${ARG}\""
+        die "Invalid option \"${ARG_ITER}\""
     fi
 
 done
 
 readonly EDIT=${EDITOR?}
 readonly RECORD=${XDG_DATA_HOME:-"$HOME/.local/share"}/note_record
-readonly TAG='%=--=%'
 verbose "Record file at: $RECORD"
+readonly TAG='%=--=%' # it's a bone!
 
 case $NOTE_COMMAND in
     new|add)
