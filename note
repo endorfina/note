@@ -39,19 +39,22 @@ Usage: \$ $PROGNAME command [-hv]
 Commands:
 
   new, add - opens up an empty buffer in your EDITOR.
-        Then, provided it's not empty, $PROGNAME will
-        save the buffer in a shared record file.
+          Then, provided it's not empty, $PROGNAME will
+          save the buffer in a shared record file.
 
   show, print - prints all saved notes in a reverse
-        chronological order to stdout.
+          chronological order to stdout.
 
   delete - $PROGNAME will erase your current record.
 
 Options:
 
-  -h - prints this help.
+  -l NUM - shows up to NUM entries (applicable only
+          when printing to stdout).
 
-  -v - shows verbose logs.
+  -h    - prints this help.
+
+  -v    - shows verbose logs.
 
 _END
 }
@@ -61,6 +64,7 @@ _END
 readonly NOTE_COMMAND=$1
 shift
 OPT_VERBOSE=no
+OPT_LIMIT=0
 
 set -o pipefail
 
@@ -90,6 +94,8 @@ do
                         OPT_LIMIT=$1
                         shift
                     fi
+
+                    [[ $OPT_LIMIT =~ [^0-9] ]] && die "Wrong -l argument \"$OPT_LIMIT\""
                     ;;
 
                 h)
@@ -142,8 +148,9 @@ case $NOTE_COMMAND in
 
         # shellcheck disable=SC1003
         RUN=(sed -e '/^'"$TAG"'/!s~^~'$'\t''~' -e 's~^'"$TAG"' \(.*\)$~-- [[ \1 ]]\'$'\n''~' "$RECORD")
+        readonly RUN
 
-        if [[ ${OPT_LIMIT:-0} -gt 0 ]]
+        if [[ $OPT_LIMIT -gt 0 ]]
         then
             verbose "Limit set to $OPT_LIMIT"
 
