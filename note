@@ -122,7 +122,7 @@ case $NOTE_COMMAND in
         TMP_FILE=$(mktemp) && [[ -w $TMP_FILE ]] || die "Failed to create a temporary file"
         readonly TMP_FILE
 
-        "$EDIT" 2>/dev/null "$TMP_FILE" || die "Neovim failed"
+        "$EDIT" 2>/dev/null "$TMP_FILE" || die "EDITOR failed"
 
         WORDS=$(wc -w < "$TMP_FILE")
         WORDS=${WORDS#[[:space:]]*}
