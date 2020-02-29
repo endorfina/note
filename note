@@ -1,0 +1,130 @@
+#!/bin/bash
+
+readonly PROGNAME=${BASH_SOURCE[0]##*/}
+
+TMP_FILE=
+
+verbose()
+{
+    if [[ ${OPT_VERBOSE} == yes ]]
+    then
+        echo >&2 '[' "$@" ']'
+    fi
+}
+
+cleanup()
+{
+    if [[ -n $TMP_FILE && -f $TMP_FILE ]]
+    then
+        verbose "Clearing temp file"
+        rm "$TMP_FILE"
+    fi
+}
+
+die()
+{
+    echo >&2 '💀' "$PROGNAME !!" "$@"
+    cleanup
+    exit 1
+}
+
+assert_callable()
+{
+    for cmd in "$@"
+    do
+        command -v "$cmd" &>/dev/null || die "No callable \"$cmd\" command in PATH"
+    done
+}
+
+print_manual()
+{
+    cat << _END
+Usage: \$ $PROGNAME new|show [-hv]
+
+_END
+}
+
+[[ $# -lt 1 ]] && print_manual && die
+
+readonly NOTE_COMMAND=$1
+shift
+OPT_VERBOSE=no
+
+while [[ $# -gt 0 ]]
+do
+    ARG=$1
+    shift
+
+    if [[ $ARG == -* ]]
+    then
+        ARG=${ARG#-}
+
+        for (( i=0; i<${#ARG}; i++ ))
+        do
+            case ${ARG:$i:1} in
+                v)
+                    OPT_VERBOSE='yes'
+                    ;;
+
+                h)
+                    print_manual
+                    exit 0
+                    ;;
+
+                *)
+                    die "Invalid option \"${ARG#-}\""
+                    ;;
+            esac
+        done
+
+    else
+        die "Invalid option \"${ARG}\""
+    fi
+
+done
+
+readonly EDIT=${EDITOR?}
+readonly RECORD=${XDG_DATA_HOME:-"$HOME/.local/share"}/note_record
+readonly TAG='%=--=%'
+verbose "Record file at: $RECORD"
+
+case $NOTE_COMMAND in
+    new|add)
+        [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be a tty"
+
+        # shellcheck disable=SC2015
+        TMP_FILE=$(mktemp) && [[ -w $TMP_FILE ]] || die "Failed to create a temporary file"
+        readonly TMP_FILE
+
+        "$EDIT" 2>/dev/null "$TMP_FILE" || die "Neovim failed"
+
+        WORDS=$(sed -E '/^[[:space:]]*$/d' "$TMP_FILE" | wc -w | sed -E 's~^[[:space:]]*~~')
+
+        [[ $WORDS -lt 1 ]] && die "No words written, discarding note"
+        verbose "Counted $WORDS words"
+
+        REC_DIR=${RECORD%/*}
+        [[ -d $REC_DIR ]] || mkdir -p "$REC_DIR" || die "Couldn't create directory \"$REC_DIR\""
+
+        [[ ! -r $RECORD ]] || echo | cat - "$RECORD" >> "$TMP_FILE" || die "Couldn't merge the record file with the note"
+        echo "$TAG $(date '+%d %b %H:%M')" | cat - "$TMP_FILE" > "$RECORD"
+        cleanup
+        ;;
+
+    show|print)
+        [[ -r $RECORD ]] || die "No record exists"
+
+        sed -e '/^'"$TAG"'/!s~^~'$'\t''~' -e 's~^'"$TAG"' \(.*\)$~-- [[ \1 ]]\'$'\n''~' "$RECORD"
+        ;;
+
+    delete)
+        rm "$RECORD" || die "Nothing to delete"
+        ;;
+
+    *)
+        print_manual
+
+        die "Invalid command \"$NOTE_COMMAND\""
+        ;;
+esac
+
