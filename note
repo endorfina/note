@@ -5,8 +5,6 @@
 
 readonly PROGNAME=${BASH_SOURCE[0]##*/}
 
-TMP_FILE=
-
 verbose()
 {
     if [[ $OPT_VERBOSE == yes ]]
@@ -34,7 +32,7 @@ die()
 print_manual()
 {
     cat << _END
-Usage: \$ $PROGNAME command [-hv]
+Usage: \$ $PROGNAME command [-hv] [-l NUM]
 
 Commands:
 
@@ -62,10 +60,8 @@ Options:
 _END
 }
 
-[[ $# -lt 1 ]] && print_manual && die
-
-readonly NOTE_COMMAND=$1
-shift
+TMP_FILE=
+NOTE_COMMAND=
 OPT_VERBOSE=no
 OPT_LIMIT=0
 
@@ -103,7 +99,14 @@ do
                 ;;
 
             *)
-                die "Invalid option \"$ARG_ITER\""
+                if [[ $i -eq 0 && -z $NOTE_COMMAND ]]
+                then
+                    NOTE_COMMAND=$ARG_ITER
+                    readonly NOTE_COMMAND
+                    i=${#ARG_ITER}
+                else
+                    die "Invalid option \"$ARG_ITER\""
+                fi
                 ;;
         esac
     done
