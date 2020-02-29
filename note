@@ -38,23 +38,26 @@ Usage: \$ $PROGNAME command [-hv]
 
 Commands:
 
-  new, add - opens up an empty buffer in your EDITOR.
-          Then, provided it's not empty, $PROGNAME will
-          save the buffer in a shared record file.
+  new, add
+        Opens up an empty buffer in your EDITOR.
+        Then, provided it's not empty, $PROGNAME will
+        save the buffer in a shared record file.
 
-  show, print - prints all saved notes in a reverse
-          chronological order to stdout.
+  show, print, sh, pr
+        Prints all saved notes in a reverse
+        chronological order to stdout.
 
-  delete - $PROGNAME will erase your current record.
+  delete, remove, del, rm
+        $PROGNAME will erase your current record.
 
 Options:
 
-  -l NUM - shows up to NUM entries (applicable only
-          when printing to stdout).
+  -l NUM : shows up to NUM entries (applicable only
+        when printing to stdout).
 
-  -h    - prints this help.
+  -h    prints this help.
 
-  -v    - shows verbose logs.
+  -v    shows verbose logs.
 
 _END
 }
@@ -141,7 +144,7 @@ case $NOTE_COMMAND in
         cleanup
         ;;
 
-    show|print)
+    sh|pr|show|print)
         [[ -r $RECORD ]] || die "No record exists"
 
         # shellcheck disable=SC1003
@@ -169,7 +172,7 @@ case $NOTE_COMMAND in
         fi
         ;;
 
-    delete)
+    del|rm|delete|remove)
         rm "$RECORD" || die "Nothing to delete"
         ;;
 
