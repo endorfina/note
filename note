@@ -124,7 +124,8 @@ case $NOTE_COMMAND in
 
         "$EDIT" 2>/dev/null "$TMP_FILE" || die "Neovim failed"
 
-        WORDS=$(sed -E '/^[[:space:]]*$/d' "$TMP_FILE" | wc -w | sed -E 's~^[[:space:]]*~~')
+        WORDS=$(wc -w < "$TMP_FILE")
+        WORDS=${WORDS#[[:space:]]*}
 
         [[ $WORDS -lt 1 ]] && die "No words written, discarding note"
         verbose "Counted $WORDS words"
