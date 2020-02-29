@@ -31,14 +31,6 @@ die()
     exit 1
 }
 
-assert_callable()
-{
-    for cmd in "$@"
-    do
-        command -v "$cmd" &>/dev/null || die "No callable \"$cmd\" command in PATH"
-    done
-}
-
 print_manual()
 {
     cat << _END
