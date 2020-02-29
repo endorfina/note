@@ -45,6 +45,10 @@ Commands:
         Prints all saved notes in a reverse
         chronological order to stdout.
 
+  open, op
+        Forwards the path to the record file
+        as an argument to your EDITOR.
+
   delete, remove, del, rm
         $PROGNAME will erase your current record.
 
@@ -119,7 +123,7 @@ readonly TAG='%=--=%' # it's a bone!
 
 case $NOTE_COMMAND in
     new|add)
-        [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be a tty"
+        [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be ttys"
 
         # shellcheck disable=SC2015
         TMP_FILE=$(mktemp) && [[ -w $TMP_FILE ]] || die "Failed to create a temporary file"
@@ -167,6 +171,13 @@ case $NOTE_COMMAND in
         else
             "${RUN[@]}"
         fi
+        ;;
+
+    op|open)
+        [[ -r $RECORD ]] || die "No record exists"
+        [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be ttys"
+
+        "$EDIT" 2>/dev/null "$RECORD"
         ;;
 
     del|rm|delete|remove)
