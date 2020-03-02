@@ -131,8 +131,8 @@ case $NOTE_COMMAND in
 
         "$EDIT" 2>/dev/null "$TMP_FILE" || die "EDITOR failed"
 
-        WORDS=$(wc -w < "$TMP_FILE")
-        WORDS=${WORDS#[[:space:]]*}
+        WORDS=$(wc -w < "$TMP_FILE") || die "Couldn't get word count"
+        readonly WORDS="${WORDS#"${WORDS%%[![:space:]]*}"}"
 
         [[ $WORDS -lt 1 ]] && die "No words written, discarding note"
         verbose "Counted $WORDS words"
