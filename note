@@ -3,7 +3,7 @@
 # (ɔ) 2020 endorfina <dev.endorfina@outlook.com>
 # WTFPL
 
-readonly PROGNAME=${BASH_SOURCE[0]##*/}
+readonly PROGNAME=${0##*/}
 
 verbose()
 {
@@ -76,60 +76,76 @@ do
     ARG_ITER=${1#-}
     shift
 
-    for (( i=0; i<${#ARG_ITER}; i++ ))
+    while [[ -n $ARG_ITER ]]
     do
-        case ${ARG_ITER:$i:1} in
-            v)
+        case $ARG_ITER in
+            v*)
                 OPT_VERBOSE='yes'
                 ;;
 
-            l)
-                (( i++ ))
-                if [[ $i -lt ${#ARG_ITER} ]]
+            l*)
+                ARG_ITER=${ARG_ITER#?}
+
+                if [[ -n $ARG_ITER ]]
                 then
-                    OPT_LIMIT=${ARG_ITER:$i}
-                    i=${#ARG_ITER}
+                    OPT_LIMIT=$ARG_ITER
+                    ARG_ITER=
                 else
                     OPT_LIMIT=$1
                     shift
                 fi
 
-                [[ $OPT_LIMIT =~ [^0-9] ]] && die "Wrong -l argument \"$OPT_LIMIT\""
+                case $OPT_LIMIT in
+                    *[![:digit:]]*|'') die "Wrong -l argument \"$OPT_LIMIT\"" ;;
+                esac
                 ;;
 
-            h)
+            h*)
                 print_manual
                 exit 0
                 ;;
 
             *)
-                if [[ $i -eq 0 && -z $NOTE_COMMAND ]]
+                if [[ -z $NOTE_COMMAND ]]
                 then
-                    NOTE_COMMAND=$ARG_ITER
-                    readonly NOTE_COMMAND
-                    i=${#ARG_ITER}
+                    readonly NOTE_COMMAND=$ARG_ITER
+                    ARG_ITER=
                 else
                     die "Invalid option \"$ARG_ITER\""
                 fi
                 ;;
         esac
+
+        ARG_ITER=${ARG_ITER#?}
     done
 done
 
-readonly EDIT=${EDITOR?}
+read_record()
+{
+    # shellcheck disable=SC1003
+    sed -e '/^'"$TAG"'/!s~^~'$'\t''~' -e 's~^'"$TAG"' \(.*\)$~-- [[ \1 ]]\'$'\n''~' "$RECORD"
+}
+
+check_for_tty()
+{
+    [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be ttys"
+}
+
+: "${EDITOR?}" # die early if EDITOR isn't defined
+
 readonly RECORD=${XDG_DATA_HOME:-"$HOME/.local/share"}/note_record
 verbose "Record file at: $RECORD"
 readonly TAG='%=--=%' # it's a bone!
 
 case $NOTE_COMMAND in
     new|add)
-        [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be ttys"
+        check_for_tty
 
         # shellcheck disable=SC2015
         TMP_FILE=$(mktemp) && [[ -w $TMP_FILE ]] || die "Failed to create a temporary file"
         readonly TMP_FILE
 
-        "$EDIT" 2>/dev/null "$TMP_FILE" || die "EDITOR failed"
+        "$EDITOR" 2>/dev/null "$TMP_FILE" || die "EDITOR failed"
 
         WORDS=$(wc -w < "$TMP_FILE") || die "Couldn't get word count"
         readonly WORDS="${WORDS#"${WORDS%%[![:space:]]*}"}"
@@ -148,36 +164,37 @@ case $NOTE_COMMAND in
     sh|pr|show|print)
         [[ -r $RECORD ]] || die "No record exists"
 
-        # shellcheck disable=SC1003
-        RUN=(sed -e '/^'"$TAG"'/!s~^~'$'\t''~' -e 's~^'"$TAG"' \(.*\)$~-- [[ \1 ]]\'$'\n''~' "$RECORD")
-        readonly RUN
-
         if [[ $OPT_LIMIT -gt 0 ]]
         then
             verbose "Limit set to $OPT_LIMIT"
 
             i=0
 
-            "${RUN[@]}" | while read -r
+            read_record | while read -r
             do
-                if [[ $REPLY == --* ]]
-                then
-                    (( i++ ))
-                    [[ $i -gt $OPT_LIMIT ]] && break
-                fi
+                case $REPLY in
+                    --*)
+                        (( ++i ))
+                        [[ $i -gt $OPT_LIMIT ]] && break
 
-                echo "$REPLY"
+                        printf '%3i. %s\n' "$i" "${REPLY#--}"
+                        ;;
+
+                    *)
+                        printf '%s\n' "$REPLY"
+                        ;;
+                esac
             done
         else
-            "${RUN[@]}"
+            read_record
         fi
         ;;
 
     op|open)
         [[ -r $RECORD ]] || die "No record exists"
-        [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be ttys"
+        check_for_tty
 
-        "$EDIT" 2>/dev/null "$RECORD"
+        "$EDITOR" 2>/dev/null "$RECORD"
         ;;
 
     del|rm|delete|remove)
