@@ -9,7 +9,7 @@ verbose()
 {
     if [[ $OPT_VERBOSE == yes ]]
     then
-        echo >&2 '[' "$@" ']'
+        printf '[ %s ]\n' >&2 "$*"
     fi
 }
 
@@ -76,6 +76,8 @@ do
     ARG_ITER=${1#-}
     shift
 
+    ARG_SIZE=${#ARG_ITER}
+
     while [[ -n $ARG_ITER ]]
     do
         case $ARG_ITER in
@@ -106,7 +108,7 @@ do
                 ;;
 
             *)
-                if [[ -z $NOTE_COMMAND ]]
+                if [[ -z $NOTE_COMMAND && $ARG_SIZE -eq ${#ARG_ITER} ]]
                 then
                     readonly NOTE_COMMAND=$ARG_ITER
                     ARG_ITER=
