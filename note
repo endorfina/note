@@ -128,6 +128,11 @@ read_record()
     sed -e '/^'"$TAG"'/!s~^~'$'\t''~' -e 's~^'"$TAG"' \(.*\)$~-- [[ \1 ]]\'$'\n''~' "$RECORD"
 }
 
+check_for_record()
+{
+    [[ -r $RECORD ]] || die "No record exists"
+}
+
 check_for_tty()
 {
     [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be ttys"
@@ -164,7 +169,7 @@ case $NOTE_COMMAND in
         ;;
 
     sh|pr|show|print)
-        [[ -r $RECORD ]] || die "No record exists"
+        check_for_record
 
         if [[ $OPT_LIMIT -gt 0 ]]
         then
@@ -193,7 +198,7 @@ case $NOTE_COMMAND in
         ;;
 
     op|open)
-        [[ -r $RECORD ]] || die "No record exists"
+        check_for_record
         check_for_tty
 
         "$EDITOR" 2>/dev/null "$RECORD"
