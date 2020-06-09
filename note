@@ -24,7 +24,7 @@ cleanup()
 
 die()
 {
-    echo >&2 '💀' "$PROGNAME !!" "$@"
+    printf >&2 '💀 %s\n' "${PROGNAME} !! $*"
     cleanup
     exit 1
 }
@@ -37,29 +37,34 @@ Usage: \$ $PROGNAME command [-hv] [-l NUM]
 Commands:
 
   new, add
-        Opens up an empty buffer in your EDITOR.
-        Then, provided it's not empty, $PROGNAME will
-        save the buffer in a shared record file.
+          Opens up an empty buffer in your EDITOR.
+          Then, provided it's not empty, $PROGNAME will
+          save the buffer in a shared record file.
 
   show, print, sh, pr
-        Prints all saved notes in a reverse
-        chronological order to stdout.
+          Prints all saved notes in reverse
+          chronological order to stdout.
 
   open, op
-        Forwards the path to the record file
-        as an argument to your EDITOR.
+          Forwards the path to the record file
+          as an argument to your EDITOR.
 
-  delete, remove, del, rm
-        $PROGNAME will erase your current record.
+  delete, del
+          $PROGNAME will erase every saved note.
 
 Options:
 
-  -l NUM : shows up to NUM entries (applicable only
-        when printing to stdout).
+  -l NUM  Shows up to NUM entries (applicable only
+          when printing to stdout).
 
-  -h    prints this help.
+  -h      Prints this help.
 
-  -v    shows verbose logs.
+  -v      Shows verbose logs.
+
+--
+          $PROGNAME uses XDG_DATA_HOME environment
+          variable to determine the location of
+          the record file.
 
 _END
 }
@@ -138,6 +143,41 @@ check_for_tty()
     [[ -t 0 && -t 1 ]] || die "stdin and stdout must both be ttys"
 }
 
+get_word_count()
+{
+    local words
+    words=$(wc -w < "$1") || return 1
+    echo -n "${words#"${words%%[![:space:]]*}"}"
+}
+
+print_record()
+{
+    if [[ $OPT_LIMIT -gt 0 ]]
+    then
+        verbose "Limit set to $OPT_LIMIT"
+
+        i=0
+
+        read_record | while read -r
+        do
+            case $REPLY in
+                --*)
+                    (( ++i ))
+                    [[ $i -gt $OPT_LIMIT ]] && break
+
+                    printf '%3i. %s\n' "$i" "${REPLY#--}"
+                    ;;
+
+                *)
+                    printf '%s\n' "$REPLY"
+                    ;;
+            esac
+        done
+    else
+        read_record
+    fi
+}
+
 : "${EDITOR?}" # die early if EDITOR isn't defined
 
 readonly RECORD=${XDG_DATA_HOME:-"$HOME/.local/share"}/note_record
@@ -154,8 +194,7 @@ case $NOTE_COMMAND in
 
         "$EDITOR" 2>/dev/null "$TMP_FILE" || die "EDITOR failed"
 
-        WORDS=$(wc -w < "$TMP_FILE") || die "Couldn't get word count"
-        readonly WORDS="${WORDS#"${WORDS%%[![:space:]]*}"}"
+        WORDS=$(get_word_count "$TMP_FILE") || die "Couldn't get the word count"
 
         [[ $WORDS -lt 1 ]] && die "No words written, discarding note"
         verbose "Counted $WORDS words"
@@ -171,29 +210,11 @@ case $NOTE_COMMAND in
     sh|pr|show|print)
         check_for_record
 
-        if [[ $OPT_LIMIT -gt 0 ]]
+        if [[ -t 0 ]]
         then
-            verbose "Limit set to $OPT_LIMIT"
-
-            i=0
-
-            read_record | while read -r
-            do
-                case $REPLY in
-                    --*)
-                        (( ++i ))
-                        [[ $i -gt $OPT_LIMIT ]] && break
-
-                        printf '%3i. %s\n' "$i" "${REPLY#--}"
-                        ;;
-
-                    *)
-                        printf '%s\n' "$REPLY"
-                        ;;
-                esac
-            done
+            print_record | "${PAGER:-less}"
         else
-            read_record
+            print_record
         fi
         ;;
 
@@ -204,7 +225,7 @@ case $NOTE_COMMAND in
         "$EDITOR" 2>/dev/null "$RECORD"
         ;;
 
-    del|rm|delete|remove)
+    del|delete)
         rm "$RECORD" || die "Nothing to delete"
         ;;
 
