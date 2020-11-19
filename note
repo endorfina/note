@@ -73,6 +73,7 @@ TMP_FILE=
 NOTE_COMMAND=
 OPT_VERBOSE=no
 OPT_LIMIT=0
+OPT_FORCE=no
 
 set -o pipefail
 
@@ -86,6 +87,10 @@ do
     while [[ -n $ARG_ITER ]]
     do
         case $ARG_ITER in
+            f*)
+                OPT_FORCE='yes'
+                ;;
+
             v*)
                 OPT_VERBOSE='yes'
                 ;;
@@ -189,7 +194,9 @@ case $NOTE_COMMAND in
         check_for_tty
 
         # shellcheck disable=SC2015
-        TMP_FILE=$(mktemp) && [[ -w $TMP_FILE ]] || die "Failed to create a temporary file"
+        TMP_FILE=$(mktemp "${TMPDIR:-/tmp}/tmp.XXXXXXXX.note.md") \
+            && [[ -w $TMP_FILE ]] \
+            || die "Failed to create a temporary file"
         readonly TMP_FILE
 
         "$EDITOR" 2>/dev/null "$TMP_FILE" || die "EDITOR failed"
@@ -226,6 +233,8 @@ case $NOTE_COMMAND in
         ;;
 
     del|delete)
+        [[ $OPT_FORCE == yes ]] || die "Pass -f flag to delete ${RECORD/#"$HOME"/$'~'}"
+
         rm "$RECORD" || die "Nothing to delete"
         ;;
 
